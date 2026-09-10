@@ -10,5 +10,6 @@ target/
 *.class
 *.log
 .DS_Store
-.mvn/wrapper/maven-wrapper.jar
-deploy/swagger-static/*.map
+.env
+**/.env
+!.env.example
