@@ -12,7 +12,6 @@
 
     <artifactId>hr-service</artifactId>
     <name>hr-service</name>
-    <description>Second web service (/hr): calls Worker Collection Service API</description>
 
     <dependencies>
         <dependency>
