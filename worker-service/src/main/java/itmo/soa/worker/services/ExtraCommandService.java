@@ -8,5 +8,5 @@ public interface ExtraCommandService {
 
     void deleteWorkerWithSalary(float salary);
 
-    double averageSalaryByOrganization();
+    double averageSalary();
 }

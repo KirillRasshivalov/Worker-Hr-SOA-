@@ -1,14 +1,15 @@
 package itmo.soa.worker.services;
 
-import itmo.soa.worker.entity.PersonEntity;
 import itmo.soa.worker.entity.WorkerEntity;
-import itmo.soa.worker.repository.PersonRepository;
 import itmo.soa.worker.repository.WorkerRepository;
+import itmo.soa.worker.specification.WorkerSpecifications;
 import itmo.soa.workerhr.model.Person;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -18,37 +19,40 @@ import java.util.List;
 public class ExtraCommandServiceImpl implements ExtraCommandService {
 
     private final WorkerRepository workerRepository;
-    private final PersonRepository personRepository;
 
     @Override
     @Transactional
     public void deleteAllWorkersWithPerson(Person person) {
         log.debug("Пришел запрос на сервис на удаление всех работников с человеком: {}", person);
-        List<PersonEntity> persons = personRepository.findAllMatching(person);
-        if (persons.isEmpty()) {
-            return;
+        if (person == null || person.getHeight() == null || person.getNationality() == null) {
+            throw new IllegalArgumentException("Для удаления по person обязательны height и nationality");
         }
-        List<Long> personIds = persons.stream().map(PersonEntity::getId).toList();
-        List<WorkerEntity> workers = workerRepository.findAllByPersonIdIn(personIds);
-        workerRepository.deleteAll(workers);
+        List<WorkerEntity> workers = workerRepository.findAll(WorkerSpecifications.personEquivalent(person));
+        if (!workers.isEmpty()) {
+            workerRepository.deleteAll(workers);
+        }
     }
 
     @Override
     @Transactional
     public void deleteWorkerWithSalary(float salary) {
         log.debug("Пришел запрос на сервис на удаление работника с зарплатой: {}", salary);
-        workerRepository.findFirstBySalary(salary).ifPresent(workerRepository::delete);
+        WorkerEntity worker = workerRepository.findFirstBySalary(salary)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Работник с salary=" + salary + " не найден"
+                ));
+        workerRepository.delete(worker);
     }
 
     @Override
     @Transactional
-    public double averageSalaryByOrganization() {
-        log.debug("Пришел запрос на сервис на получение средней зарплаты по организациям");
+    public double averageSalary() {
+        log.debug("Пришел запрос на сервис на получение средней зарплаты");
         List<WorkerEntity> workers = workerRepository.findAll();
         if (workers.isEmpty()) {
             return 0.0;
         }
-        double totalSalary = workers.stream().mapToDouble(WorkerEntity::getSalary).sum();
-        return totalSalary / workers.size();
+        return workers.stream().mapToDouble(WorkerEntity::getSalary).sum() / workers.size();
     }
 }

@@ -4,9 +4,13 @@ import itmo.soa.worker.entity.WorkerEntity;
 import itmo.soa.workerhr.model.Country;
 import itmo.soa.workerhr.model.EyeColor;
 import itmo.soa.workerhr.model.HairColor;
+import itmo.soa.workerhr.model.Location;
+import itmo.soa.workerhr.model.Person;
 import itmo.soa.workerhr.model.Position;
 import itmo.soa.workerhr.model.Status;
 import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Path;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
@@ -64,6 +68,45 @@ public final class WorkerSpecifications {
             }
             return cb.and(predicates.toArray(Predicate[]::new));
         };
+    }
+
+    public static Specification<WorkerEntity> personEquivalent(Person person) {
+        return (root, query, cb) -> {
+            Join<WorkerEntity, ?> personJoin = root.join("person", JoinType.INNER);
+            List<Predicate> predicates = new ArrayList<>();
+            predicates.add(cb.equal(personJoin.get("height"), person.getHeight()));
+            predicates.add(cb.equal(personJoin.get("nationality"), person.getNationality()));
+            predicates.add(nullSafeEqual(cb, personJoin.get("eyeColor"), person.getEyeColor()));
+            predicates.add(nullSafeEqual(cb, personJoin.get("hairColor"), person.getHairColor()));
+
+            Location location = person.getLocation();
+            Path<?> locX = personJoin.get("location").get("x");
+            Path<?> locY = personJoin.get("location").get("y");
+            Path<?> locZ = personJoin.get("location").get("z");
+            Path<?> locName = personJoin.get("location").get("name");
+
+            if (location == null) {
+                predicates.add(cb.and(
+                        cb.isNull(locX),
+                        cb.isNull(locY),
+                        cb.isNull(locZ),
+                        cb.isNull(locName)
+                ));
+            } else {
+                predicates.add(cb.equal(locX, location.getX()));
+                predicates.add(cb.equal(locY, location.getY()));
+                predicates.add(cb.equal(locZ, location.getZ()));
+                predicates.add(nullSafeEqual(cb, locName, location.getName()));
+            }
+            return cb.and(predicates.toArray(Predicate[]::new));
+        };
+    }
+
+    private static Predicate nullSafeEqual(CriteriaBuilder cb, Path<?> path, Object value) {
+        if (value == null) {
+            return cb.isNull(path);
+        }
+        return cb.equal(path, value);
     }
 
     private static Predicate buildPredicate(Root<WorkerEntity> root, CriteriaBuilder cb,

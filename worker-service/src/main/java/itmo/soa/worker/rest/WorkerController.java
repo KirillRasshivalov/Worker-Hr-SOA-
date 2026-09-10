@@ -3,6 +3,7 @@ package itmo.soa.worker.rest;
 import itmo.soa.worker.services.WorkerService;
 import itmo.soa.workerhr.model.Worker;
 import itmo.soa.workerhr.model.WorkerPage;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -55,16 +56,16 @@ public class WorkerController {
         return workerService.getWorkerById(id);
     }
 
-    @PostMapping(value = "/create", consumes = MediaType.APPLICATION_XML_VALUE)
+    @PostMapping(consumes = MediaType.APPLICATION_XML_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
-    public void addNewWorker(@RequestBody Worker worker) {
+    public void addNewWorker(@Valid @RequestBody Worker worker) {
         log.info("Пришел запрос на создание работника");
         workerService.addNewWorker(worker);
     }
 
     @PutMapping(value = "/{worker-id}", consumes = MediaType.APPLICATION_XML_VALUE)
     @ResponseStatus(HttpStatus.OK)
-    public Worker updateWorker(@PathVariable("worker-id") long id, @RequestBody Worker worker) {
+    public Worker updateWorker(@PathVariable("worker-id") long id, @Valid @RequestBody Worker worker) {
         log.info("Пришел запрос на обновление работника с id = {}", id);
         return workerService.updateWorker(id, worker);
     }
