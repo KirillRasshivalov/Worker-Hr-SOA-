@@ -14,5 +14,16 @@ services:
       - workerhr_pg:/var/lib/postgresql/data
     restart: unless-stopped
 
+  swagger-ui:
+    image: swaggerapi/swagger-ui:v5.17.14
+    container_name: workerhr-swagger
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./openapi/openapi.yaml:/openapi.yaml:ro
+    environment:
+      SWAGGER_JSON: /openapi.yaml
+    restart: unless-stopped
+
 volumes:
   workerhr_pg:
