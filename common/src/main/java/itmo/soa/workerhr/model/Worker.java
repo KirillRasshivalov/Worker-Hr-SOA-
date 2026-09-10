@@ -33,6 +33,8 @@ public class Worker {
     @NotNull
     private Status status;
 
+    private Long organizationId;
+
     @Valid
     private Person person;
 }
