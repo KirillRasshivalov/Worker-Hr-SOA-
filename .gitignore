@@ -1,0 +1,14 @@
+target/
+.idea/
+*.iml
+*.ipr
+*.iws
+.classpath
+.project
+.settings/
+.vscode/
+*.class
+*.log
+.DS_Store
+.mvn/wrapper/maven-wrapper.jar
+deploy/swagger-static/*.map
