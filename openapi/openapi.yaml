@@ -1,0 +1,627 @@
+openapi: 3.0.3
+info:
+  title: Worker Collection и HR Web сервис
+  description: |
+    Два веб-сервиса:
+
+    1. **worker-service** (`:8081`) — управление коллекцией `Worker` (CRUD, фильтры, сортировка, пагинация, спец. операции).
+    2. **hr-service** (`:8082`) — `/hr/fire` и `/hr/move`, вызывают API worker-service.
+
+    Формат данных: **XML**. Параметры операций — в URL (path/query).
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8081
+    description: worker-service
+  - url: http://localhost:8082
+    description: hr-service
+
+tags:
+  - name: workers
+    description: Базовые и специальные операции над коллекцией Worker
+  - name: hr
+    description: Дополнительные операции (увольнение и перемещение сотрудников)
+
+paths:
+  /workers:
+    get:
+      tags: [workers]
+      summary: Получить массив элементов коллекции
+      description: |
+        Возвращает список работников с поддержкой:
+        - фильтрации по любой комбинации полей;
+        - сортировки по любому полю;
+        - постраничной выдачи (`page`, `size`).
+      operationId: getWorkers
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+        - $ref: '#/components/parameters/SortParam'
+        - $ref: '#/components/parameters/SortOrderParam'
+        - name: id
+          in: query
+          schema: { type: integer, format: int64, exclusiveMinimum: 0 }
+          description: Фильтр по id
+        - name: name
+          in: query
+          schema: { type: string, minLength: 1 }
+          description: Фильтр по name
+        - name: salary
+          in: query
+          schema: { type: number, format: float, exclusiveMinimum: 0 }
+          description: Фильтр по salary
+        - name: position
+          in: query
+          schema: { $ref: '#/components/schemas/Position' }
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/Status' }
+        - name: creationDate
+          in: query
+          schema: { type: string, format: date }
+        - name: coordinates.x
+          in: query
+          schema: { type: number, format: double, exclusiveMinimum: -250 }
+        - name: coordinates.y
+          in: query
+          schema: { type: number, format: float }
+        - name: person.height
+          in: query
+          schema: { type: integer, exclusiveMinimum: 0 }
+        - name: person.eyeColor
+          in: query
+          schema: { $ref: '#/components/schemas/EyeColor' }
+        - name: person.hairColor
+          in: query
+          schema: { $ref: '#/components/schemas/HairColor' }
+        - name: person.nationality
+          in: query
+          schema: { $ref: '#/components/schemas/Country' }
+        - name: person.location.x
+          in: query
+          schema: { type: integer, format: int64 }
+        - name: person.location.y
+          in: query
+          schema: { type: number, format: float }
+        - name: person.location.z
+          in: query
+          schema: { type: integer, format: int32 }
+        - name: person.location.name
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: Страница результатов выборки
+          content:
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/WorkerPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+    post:
+      tags: [workers]
+      summary: Добавить новый элемент в коллекцию
+      description: |
+        Создаёт объект `Worker`. Поля `id` и `creationDate` генерируются сервисом автоматически
+        и в запросе игнорируются (если переданы).
+      operationId: createWorker
+      requestBody:
+        required: true
+        content:
+          application/xml:
+            schema:
+              $ref: '#/components/schemas/WorkerCreate'
+      responses:
+        '201':
+          description: Элемент создан
+          content:
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/Worker'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /workers/{id}:
+    parameters:
+      - $ref: '#/components/parameters/WorkerIdPath'
+    get:
+      tags: [workers]
+      summary: Получить элемент по ID
+      operationId: getWorkerById
+      responses:
+        '200':
+          description: Найденный Worker
+          content:
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/Worker'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [workers]
+      summary: Обновить элемент по ID
+      description: Полностью заменяет данные работника с указанным ID. `id` и `creationDate` не изменяются.
+      operationId: updateWorker
+      requestBody:
+        required: true
+        content:
+          application/xml:
+            schema:
+              $ref: '#/components/schemas/WorkerUpdate'
+      responses:
+        '200':
+          description: Элемент обновлён
+          content:
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/Worker'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [workers]
+      summary: Удалить элемент по ID
+      operationId: deleteWorker
+      responses:
+        '200':
+          description: Элемент удалён
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /extra/delete-all-workers-with-person:
+    delete:
+      tags: [workers]
+      summary: Удалить все объекты с заданным person
+      description: |
+        Удаляет все элементы коллекции, у которых значение поля `person` эквивалентно
+        переданному. Параметры person передаются в query-строке URL.
+      operationId: deleteWorkersByPerson
+      parameters:
+        - name: height
+          in: query
+          required: true
+          schema: { type: integer, exclusiveMinimum: 0 }
+        - name: eyeColor
+          in: query
+          required: false
+          schema: { $ref: '#/components/schemas/EyeColor' }
+        - name: hairColor
+          in: query
+          required: false
+          schema: { $ref: '#/components/schemas/HairColor' }
+        - name: nationality
+          in: query
+          required: true
+          schema: { $ref: '#/components/schemas/Country' }
+        - name: location.x
+          in: query
+          required: false
+          schema: { type: integer, format: int64 }
+        - name: location.y
+          in: query
+          required: false
+          schema: { type: number, format: float }
+        - name: location.z
+          in: query
+          required: false
+          schema: { type: integer, format: int32 }
+        - name: location.name
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        '200':
+          description: Удаление выполнено
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /extra/delete-worker-with-salary:
+    delete:
+      tags: [workers]
+      summary: Удалить один объект с заданным salary
+      description: Удаляет один (любой) объект коллекции, у которого `salary` равен заданному значению.
+      operationId: deleteOneWorkerBySalary
+      parameters:
+        - name: salary
+          in: query
+          required: true
+          schema:
+            type: number
+            format: float
+            exclusiveMinimum: 0
+          description: Значение salary для поиска и удаления
+      responses:
+        '200':
+          description: Объект удалён
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /extra/average-salary:
+    get:
+      tags: [workers]
+      summary: Среднее значение salary по всей коллекции
+      description: Рассчитывает среднее арифметическое поля `salary` для всех объектов коллекции.
+      operationId: getAverageSalary
+      responses:
+        '200':
+          description: Среднее значение salary
+          content:
+            application/xml:
+              schema:
+                type: number
+                format: double
+
+  /hr/fire/{id}:
+    post:
+      tags: [hr]
+      summary: Уволить сотрудника
+      description: |
+        Увольняет сотрудника с заданным `id`: через API worker-service выставляет `status=FIRED`
+        и снимает с организации (`organizationId=null`).
+      operationId: fireWorker
+      parameters:
+        - $ref: '#/components/parameters/WorkerIdPath'
+      responses:
+        '200':
+          description: Сотрудник уволен
+          content:
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/Worker'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '502':
+          description: Ошибка при обращении к Worker Collection Service
+          content:
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /hr/move/{worker-id}/{id-from}/{id-to}:
+    post:
+      tags: [hr]
+      summary: Переместить сотрудника между организациями
+      description: |
+        Перемещает сотрудника `worker-id` из организации `id-from` в организацию `id-to`
+        с сохранением должности (`position`) и заработной платы (`salary`).
+        Реализуется через вызовы API worker-service (GET + PUT).
+      operationId: moveWorker
+      parameters:
+        - name: worker-id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            exclusiveMinimum: 0
+          description: ID сотрудника
+        - name: id-from
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID организации-источника
+        - name: id-to
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+          description: ID организации-назначения
+      responses:
+        '200':
+          description: Сотрудник перемещён
+          content:
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/Worker'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '502':
+          description: Ошибка при обращении к Worker Collection Service
+          content:
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  parameters:
+    WorkerIdPath:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+        exclusiveMinimum: 0
+      description: Уникальный идентификатор Worker (> 0)
+    PageParam:
+      name: page
+      in: query
+      description: Порядковый номер страницы (с нуля)
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+    SizeParam:
+      name: size
+      in: query
+      description: Размер страницы
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 10
+    SortParam:
+      name: sort
+      in: query
+      description: |
+        Поле сортировки. Допустимы имена полей Worker и вложенные пути
+        (`salary`, `name`, `coordinates.x`, `person.height`, …).
+      schema:
+        type: string
+    SortOrderParam:
+      name: order
+      in: query
+      description: Направление сортировки
+      schema:
+        type: string
+        enum: [asc, desc]
+        default: asc
+
+  responses:
+    BadRequest:
+      description: Нарушены ограничения целостности или некорректные параметры
+      content:
+        application/xml:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Объект не найден
+      content:
+        application/xml:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    Position:
+      type: string
+      enum: [DIRECTOR, HEAD_OF_DIVISION, DEVELOPER, MANAGER_OF_CLEANING]
+
+    Status:
+      type: string
+      enum: [FIRED, RECOMMENDED_FOR_PROMOTION, REGULAR, PROBATION]
+
+    EyeColor:
+      type: string
+      description: Цвет глаз (первый enum Color из ТЗ)
+      enum: [GREEN, RED, WHITE, BROWN]
+
+    HairColor:
+      type: string
+      description: Цвет волос (второй enum Color из ТЗ)
+      enum: [GREEN, RED, BLACK, YELLOW, WHITE]
+
+    Country:
+      type: string
+      enum: [USA, VATICAN, JAPAN]
+
+    Coordinates:
+      type: object
+      required: [x]
+      properties:
+        x:
+          type: number
+          format: double
+          exclusiveMinimum: -250
+          description: Значение > -250, не null
+        y:
+          type: number
+          format: float
+
+    Location:
+      type: object
+      required: [x, y, z]
+      properties:
+        x:
+          type: integer
+          format: int64
+        y:
+          type: number
+          format: float
+        z:
+          type: integer
+          format: int32
+        name:
+          type: string
+          nullable: true
+
+    Person:
+      type: object
+      required: [height, nationality]
+      properties:
+        height:
+          type: integer
+          exclusiveMinimum: 0
+          description: Не null, значение > 0
+        eyeColor:
+          allOf:
+            - $ref: '#/components/schemas/EyeColor'
+          nullable: true
+        hairColor:
+          allOf:
+            - $ref: '#/components/schemas/HairColor'
+          nullable: true
+        nationality:
+          $ref: '#/components/schemas/Country'
+        location:
+          allOf:
+            - $ref: '#/components/schemas/Location'
+          nullable: true
+
+    Worker:
+      type: object
+      required: [id, name, coordinates, creationDate, salary, status]
+      properties:
+        id:
+          type: integer
+          format: int64
+          exclusiveMinimum: 0
+          description: Уникальный, > 0, генерируется автоматически
+          readOnly: true
+        name:
+          type: string
+          minLength: 1
+          description: Не null и не пустая строка
+        coordinates:
+          $ref: '#/components/schemas/Coordinates'
+        creationDate:
+          type: string
+          format: date
+          description: Генерируется автоматически
+          readOnly: true
+        salary:
+          type: number
+          format: float
+          exclusiveMinimum: 0
+        position:
+          allOf:
+            - $ref: '#/components/schemas/Position'
+          nullable: true
+        status:
+          $ref: '#/components/schemas/Status'
+        organizationId:
+          type: integer
+          format: int64
+          nullable: true
+          description: ID организации (для HR move/fire)
+        person:
+          allOf:
+            - $ref: '#/components/schemas/Person'
+          nullable: true
+      xml:
+        name: Worker
+
+    WorkerCreate:
+      type: object
+      required: [name, coordinates, salary, status]
+      description: Тело запроса на создание (без id и creationDate)
+      properties:
+        name:
+          type: string
+          minLength: 1
+        coordinates:
+          $ref: '#/components/schemas/Coordinates'
+        salary:
+          type: number
+          format: float
+          exclusiveMinimum: 0
+        position:
+          allOf:
+            - $ref: '#/components/schemas/Position'
+          nullable: true
+        status:
+          $ref: '#/components/schemas/Status'
+        organizationId:
+          type: integer
+          format: int64
+          nullable: true
+        person:
+          allOf:
+            - $ref: '#/components/schemas/Person'
+          nullable: true
+      xml:
+        name: Worker
+
+    WorkerUpdate:
+      type: object
+      required: [name, coordinates, salary, status]
+      description: Тело запроса на обновление (id и creationDate не меняются)
+      properties:
+        name:
+          type: string
+          minLength: 1
+        coordinates:
+          $ref: '#/components/schemas/Coordinates'
+        salary:
+          type: number
+          format: float
+          exclusiveMinimum: 0
+        position:
+          allOf:
+            - $ref: '#/components/schemas/Position'
+          nullable: true
+        status:
+          $ref: '#/components/schemas/Status'
+        organizationId:
+          type: integer
+          format: int64
+          nullable: true
+        person:
+          allOf:
+            - $ref: '#/components/schemas/Person'
+          nullable: true
+      xml:
+        name: Worker
+
+    WorkerPage:
+      type: object
+      properties:
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Worker'
+      xml:
+        name: WorkerPage
+
+    AverageSalaryResult:
+      type: object
+      required: [averageSalary]
+      properties:
+        averageSalary:
+          type: number
+          format: double
+      xml:
+        name: AverageSalaryResult
+
+    DeleteCountResult:
+      type: object
+      required: [deleted]
+      properties:
+        deleted:
+          type: integer
+          format: int64
+          description: Число удалённых объектов
+      xml:
+        name: DeleteCountResult
+
+    ErrorResponse:
+      type: object
+      required: [status, message]
+      properties:
+        status:
+          type: integer
+          description: HTTP-код ошибки
+        message:
+          type: string
+        details:
+          type: string
+          nullable: true
+      xml:
+        name: Error
