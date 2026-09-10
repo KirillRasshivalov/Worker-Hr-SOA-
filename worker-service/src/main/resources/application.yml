@@ -4,22 +4,30 @@ server:
 spring:
   application:
     name: worker-service
+  config:
+    import: optional:file:.env[.properties],optional:file:../.env[.properties]
   jackson:
     serialization:
       write-dates-as-timestamps: false
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:workerhr}
-    username: ${DB_USER:worker}
-    password: ${DB_PASSWORD:worker}
+    url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
       ddl-auto: update
     open-in-view: false
+    defer-datasource-initialization: true
     properties:
       hibernate:
         jdbc:
           time_zone: UTC
     show-sql: false
+  sql:
+    init:
+      mode: always
+      continue-on-error: true
 
 logging:
   level:

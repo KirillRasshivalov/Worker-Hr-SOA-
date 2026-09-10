@@ -26,6 +26,7 @@ public class WorkerMapper {
         dto.setSalary(entity.getSalary());
         dto.setPosition(entity.getPosition());
         dto.setStatus(entity.getStatus());
+        dto.setOrganizationId(entity.getOrganization() != null ? entity.getOrganization().getId() : null);
         dto.setPerson(toDto(entity.getPerson()));
         return dto;
     }

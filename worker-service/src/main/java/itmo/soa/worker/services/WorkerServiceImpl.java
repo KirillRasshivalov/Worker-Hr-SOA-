@@ -1,7 +1,9 @@
 package itmo.soa.worker.services;
 
+import itmo.soa.worker.entity.OrganizationEntity;
 import itmo.soa.worker.entity.WorkerEntity;
 import itmo.soa.worker.mapper.WorkerMapper;
+import itmo.soa.worker.repository.OrganizationRepository;
 import itmo.soa.worker.repository.WorkerRepository;
 import itmo.soa.worker.specification.WorkerSpecifications;
 import itmo.soa.workerhr.model.Worker;
@@ -29,16 +31,19 @@ public class WorkerServiceImpl implements WorkerService {
 
     private final WorkerMapper workerMapper;
     private final WorkerRepository workerRepository;
+    private final OrganizationRepository organizationRepository;
 
     @Override
     @Transactional
     public void addNewWorker(Worker worker) {
-        log.debug("Пришел запрос на сервис на создание работника с id = {}", worker.getId());
+        log.debug("Пришел запрос на сервис на создание работника");
         WorkerEntity workerEntity = workerMapper.toEntity(worker);
+        applyOrganization(workerEntity, worker.getOrganizationId());
         workerRepository.save(workerEntity);
     }
 
     @Override
+    @Transactional
     public Worker getWorkerById(long id) {
         log.debug("Пришел запрос на сервис на получение работника с id = {}", id);
         WorkerEntity workerEntity = workerRepository.findById(id)
@@ -53,6 +58,7 @@ public class WorkerServiceImpl implements WorkerService {
         WorkerEntity workerEntity = workerRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Работник с id " + id + " не найден"));
         workerMapper.updateEntity(workerEntity, worker);
+        applyOrganization(workerEntity, worker.getOrganizationId());
         workerRepository.save(workerEntity);
         return workerMapper.toDto(workerEntity);
     }
@@ -88,6 +94,19 @@ public class WorkerServiceImpl implements WorkerService {
         workerPage.setTotalPages(result.getTotalPages());
         workerPage.setItems(result.getContent().stream().map(workerMapper::toDto).toList());
         return workerPage;
+    }
+
+    private void applyOrganization(WorkerEntity entity, Long organizationId) {
+        if (organizationId == null) {
+            entity.setOrganization(null);
+            return;
+        }
+        OrganizationEntity organization = organizationRepository.findById(organizationId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Организация с id " + organizationId + " не найдена"
+                ));
+        entity.setOrganization(organization);
     }
 
     private static Sort buildSort(String sort, String order) {
