@@ -1,0 +1,16 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: hr-service
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+
+worker-service:
+  base-url: http://localhost:8081
+
+logging:
+  level:
+    root: INFO
