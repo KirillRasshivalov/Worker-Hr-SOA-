@@ -4,7 +4,6 @@ import itmo.soa.worker.entity.WorkerEntity;
 import itmo.soa.worker.mapper.WorkerMapper;
 import itmo.soa.worker.repository.WorkerRepository;
 import itmo.soa.worker.specification.WorkerSpecifications;
-import itmo.soa.workerhr.model.Person;
 import itmo.soa.workerhr.model.Worker;
 import itmo.soa.workerhr.model.WorkerPage;
 import jakarta.transaction.Transactional;

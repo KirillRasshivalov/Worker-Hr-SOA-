@@ -62,16 +62,10 @@ public class WorkerEntity {
     @Column(nullable = false, length = 64)
     private Status status;
 
-    /**
-     * Организация сотрудника (для /hr/move). Может быть null до назначения.
-     */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "organization_id")
     private OrganizationEntity organization;
 
-    /**
-     * Person опционален. Cascade ALL + orphanRemoval — при удалении Worker удаляется и Person.
-     */
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     @JoinColumn(name = "person_id", unique = true)
     private PersonEntity person;
