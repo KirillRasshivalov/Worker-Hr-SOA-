@@ -58,9 +58,9 @@ public class WorkerController {
 
     @PostMapping(consumes = MediaType.APPLICATION_XML_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
-    public void addNewWorker(@Valid @RequestBody Worker worker) {
+    public Worker addNewWorker(@Valid @RequestBody Worker worker) {
         log.info("Пришел запрос на создание работника");
-        workerService.addNewWorker(worker);
+        return workerService.addNewWorker(worker);
     }
 
     @PutMapping(value = "/{worker-id}", consumes = MediaType.APPLICATION_XML_VALUE)

@@ -35,11 +35,12 @@ public class WorkerServiceImpl implements WorkerService {
 
     @Override
     @Transactional
-    public void addNewWorker(Worker worker) {
+    public Worker addNewWorker(Worker worker) {
         log.debug("Пришел запрос на сервис на создание работника");
         WorkerEntity workerEntity = workerMapper.toEntity(worker);
         applyOrganization(workerEntity, worker.getOrganizationId());
         workerRepository.save(workerEntity);
+        return workerMapper.toDto(workerEntity);
     }
 
     @Override

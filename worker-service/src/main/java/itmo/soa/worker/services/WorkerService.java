@@ -7,7 +7,7 @@ import java.util.Map;
 
 public interface WorkerService {
 
-    void addNewWorker(Worker worker);
+    Worker addNewWorker(Worker worker);
 
     Worker getWorkerById(long id);
 
