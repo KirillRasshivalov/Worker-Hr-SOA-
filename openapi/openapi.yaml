@@ -20,7 +20,7 @@ tags:
   - name: workers
     description: Базовые и специальные операции над коллекцией Worker
   - name: hr
-    description: Дополнительные операции (увольнение и перемещение сотрудников)
+    description: Дополнительные операции hr (увольнение и перемещение сотрудников)
 
 paths:
   /workers:
@@ -98,6 +98,12 @@ paths:
                 $ref: '#/components/schemas/WorkerPage'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
 
     post:
       tags: [workers]
@@ -121,6 +127,18 @@ paths:
                 $ref: '#/components/schemas/Worker'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
 
   /workers/{id}:
     parameters:
@@ -136,8 +154,16 @@ paths:
             application/xml:
               schema:
                 $ref: '#/components/schemas/Worker'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '404':
           $ref: '#/components/responses/NotFound'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
     put:
       tags: [workers]
       summary: Обновить элемент по ID
@@ -160,6 +186,16 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '404':
           $ref: '#/components/responses/NotFound'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
     delete:
       tags: [workers]
       summary: Удалить элемент по ID
@@ -167,8 +203,14 @@ paths:
       responses:
         '200':
           description: Элемент удалён
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '404':
           $ref: '#/components/responses/NotFound'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
 
   /extra/delete-all-workers-with-person:
     delete:
@@ -177,6 +219,7 @@ paths:
       description: |
         Удаляет все элементы коллекции, у которых значение поля `person` эквивалентно
         переданному. Параметры person передаются в query-строке URL.
+        Если подходящих объектов нет — `404`.
       operationId: deleteWorkersByPerson
       parameters:
         - name: height
@@ -216,6 +259,12 @@ paths:
           description: Удаление выполнено
         '400':
           $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
 
   /extra/delete-worker-with-salary:
     delete:
@@ -239,6 +288,10 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '404':
           $ref: '#/components/responses/NotFound'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
 
   /extra/average-salary:
     get:
@@ -254,6 +307,12 @@ paths:
               schema:
                 type: number
                 format: double
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
 
   /hr/fire/{id}:
     post:
@@ -262,6 +321,7 @@ paths:
       description: |
         Увольняет сотрудника с заданным `id`: через API worker-service выставляет `status=FIRED`
         и снимает с организации (`organizationId=null`).
+        Если сотрудник уже `FIRED` — `409`.
       operationId: fireWorker
       parameters:
         - $ref: '#/components/parameters/WorkerIdPath'
@@ -272,14 +332,20 @@ paths:
             application/xml:
               schema:
                 $ref: '#/components/schemas/Worker'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '404':
           $ref: '#/components/responses/NotFound'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
         '502':
-          description: Ошибка при обращении к Worker Collection Service
-          content:
-            application/xml:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+          $ref: '#/components/responses/BadGateway'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
 
   /hr/move/{worker-id}/{id-from}/{id-to}:
     post:
@@ -289,6 +355,7 @@ paths:
         Перемещает сотрудника `worker-id` из организации `id-from` в организацию `id-to`
         с сохранением должности (`position`) и заработной платы (`salary`).
         Реализуется через вызовы API worker-service (GET + PUT).
+        Если сотрудник не состоит в `id-from` — `409`.
       operationId: moveWorker
       parameters:
         - name: worker-id
@@ -324,12 +391,16 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '404':
           $ref: '#/components/responses/NotFound'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
         '502':
-          description: Ошибка при обращении к Worker Collection Service
-          content:
-            application/xml:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
+          $ref: '#/components/responses/BadGateway'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
 
 components:
   parameters:
@@ -378,17 +449,150 @@ components:
 
   responses:
     BadRequest:
-      description: Нарушены ограничения целостности или некорректные параметры
+      description: Некорректные параметры URL/query или повреждённое тело запроса
       content:
         application/xml:
           schema:
-            $ref: '#/components/schemas/ErrorResponse'
+            $ref: '#/components/schemas/BadRequestError'
+          example: |
+            <BadRequestError>
+              <status>400</status>
+              <errorCode>TYPE_MISMATCH</errorCode>
+              <message>Некорректный параметр запроса</message>
+              <parameter>id</parameter>
+              <reason>Параметр 'id' имеет некорректный тип</reason>
+            </BadRequestError>
     NotFound:
       description: Объект не найден
       content:
         application/xml:
           schema:
-            $ref: '#/components/schemas/ErrorResponse'
+            $ref: '#/components/schemas/NotFoundError'
+          example: |
+            <NotFoundError>
+              <status>404</status>
+              <errorCode>RESOURCE_NOT_FOUND</errorCode>
+              <message>Работник с id 42 не найден</message>
+              <resource>Worker</resource>
+              <resourceId>42</resourceId>
+            </NotFoundError>
+    Conflict:
+      description: Конфликт состояния или нарушение целостности данных
+      content:
+        application/xml:
+          schema:
+            $ref: '#/components/schemas/ConflictError'
+          example: |
+            <ConflictError>
+              <status>409</status>
+              <errorCode>STATE_CONFLICT</errorCode>
+              <message>Работник уже уволен</message>
+              <conflict>Работник уже уволен</conflict>
+            </ConflictError>
+    MethodNotAllowed:
+      description: HTTP-метод не поддерживается для данного ресурса
+      content:
+        application/xml:
+          schema:
+            $ref: '#/components/schemas/MethodNotAllowedError'
+          example: |
+            <MethodNotAllowedError>
+              <status>405</status>
+              <errorCode>METHOD_NOT_ALLOWED</errorCode>
+              <message>Метод не поддерживается</message>
+              <method>PATCH</method>
+              <supportedMethods>GET, POST, PUT, DELETE</supportedMethods>
+            </MethodNotAllowedError>
+    NotAcceptable:
+      description: Клиент запросил неподдерживаемый Accept (ожидается application/xml)
+      content:
+        application/xml:
+          schema:
+            $ref: '#/components/schemas/NotAcceptableError'
+          example: |
+            <NotAcceptableError>
+              <status>406</status>
+              <errorCode>NOT_ACCEPTABLE</errorCode>
+              <message>Неподдерживаемый Accept</message>
+              <accept>application/json</accept>
+              <supported>application/xml</supported>
+            </NotAcceptableError>
+    UnsupportedMediaType:
+      description: Неподдерживаемый Content-Type (ожидается application/xml)
+      content:
+        application/xml:
+          schema:
+            $ref: '#/components/schemas/UnsupportedMediaTypeError'
+          example: |
+            <UnsupportedMediaTypeError>
+              <status>415</status>
+              <errorCode>UNSUPPORTED_MEDIA_TYPE</errorCode>
+              <message>Неподдерживаемый Content-Type</message>
+              <contentType>application/json</contentType>
+              <supported>application/xml</supported>
+            </UnsupportedMediaTypeError>
+    UnprocessableEntity:
+      description: Тело запроса синтаксически корректно, но не проходит Bean Validation
+      content:
+        application/xml:
+          schema:
+            $ref: '#/components/schemas/ValidationError'
+          example: |
+            <ValidationError>
+              <status>422</status>
+              <errorCode>BODY_VALIDATION_FAILED</errorCode>
+              <message>Ошибка валидации тела запроса</message>
+              <violations>
+                <violation>
+                  <field>name</field>
+                  <message>must not be blank</message>
+                </violation>
+                <violation>
+                  <field>salary</field>
+                  <message>must be greater than 0</message>
+                </violation>
+              </violations>
+            </ValidationError>
+    InternalError:
+      description: Внутренняя ошибка сервера
+      content:
+        application/xml:
+          schema:
+            $ref: '#/components/schemas/InternalServerError'
+          example: |
+            <InternalServerError>
+              <status>500</status>
+              <errorCode>INTERNAL_ERROR</errorCode>
+              <message>Внутренняя ошибка сервера</message>
+            </InternalServerError>
+    BadGateway:
+      description: Ошибка при обращении HR-сервиса к worker-service
+      content:
+        application/xml:
+          schema:
+            $ref: '#/components/schemas/BadGatewayError'
+          example: |
+            <BadGatewayError>
+              <status>502</status>
+              <errorCode>UPSTREAM_ERROR</errorCode>
+              <message>Ошибка при обращении к worker-service</message>
+              <upstream>worker-service</upstream>
+              <upstreamStatus>500</upstreamStatus>
+              <upstreamBody>...</upstreamBody>
+            </BadGatewayError>
+    ServiceUnavailable:
+      description: Временно недоступны БД или worker-service
+      content:
+        application/xml:
+          schema:
+            $ref: '#/components/schemas/ServiceUnavailableError'
+          example: |
+            <ServiceUnavailableError>
+              <status>503</status>
+              <errorCode>DATABASE_UNAVAILABLE</errorCode>
+              <message>Сервис временно недоступен (БД)</message>
+              <dependency>database</dependency>
+            </ServiceUnavailableError>
 
   schemas:
     Position:
@@ -611,17 +815,142 @@ components:
       xml:
         name: DeleteCountResult
 
-    ErrorResponse:
+    FieldViolation:
       type: object
-      required: [status, message]
+      required: [field, message]
       properties:
-        status:
-          type: integer
-          description: HTTP-код ошибки
+        field:
+          type: string
         message:
           type: string
-        details:
-          type: string
-          nullable: true
       xml:
-        name: Error
+        name: violation
+
+    BadRequestError:
+      type: object
+      required: [status, errorCode, message]
+      description: Тело ошибки 400
+      properties:
+        status: { type: integer, example: 400 }
+        errorCode: { type: string, example: TYPE_MISMATCH }
+        message: { type: string }
+        parameter: { type: string, nullable: true, description: Имя проблемного параметра }
+        reason: { type: string, nullable: true }
+      xml:
+        name: BadRequestError
+
+    NotFoundError:
+      type: object
+      required: [status, errorCode, message, resource]
+      description: Тело ошибки 404
+      properties:
+        status: { type: integer, example: 404 }
+        errorCode: { type: string, example: RESOURCE_NOT_FOUND }
+        message: { type: string }
+        resource: { type: string, example: Worker }
+        resourceId: { type: string, nullable: true, example: "42" }
+      xml:
+        name: NotFoundError
+
+    ValidationError:
+      type: object
+      required: [status, errorCode, message, violations]
+      description: Тело ошибки 422
+      properties:
+        status: { type: integer, example: 422 }
+        errorCode: { type: string, example: BODY_VALIDATION_FAILED }
+        message: { type: string }
+        violations:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldViolation'
+      xml:
+        name: ValidationError
+
+    ConflictError:
+      type: object
+      required: [status, errorCode, message]
+      description: Тело ошибки 409
+      properties:
+        status: { type: integer, example: 409 }
+        errorCode: { type: string, example: STATE_CONFLICT }
+        message: { type: string }
+        conflict: { type: string, nullable: true }
+      xml:
+        name: ConflictError
+
+    MethodNotAllowedError:
+      type: object
+      required: [status, errorCode, message]
+      description: Тело ошибки 405
+      properties:
+        status: { type: integer, example: 405 }
+        errorCode: { type: string, example: METHOD_NOT_ALLOWED }
+        message: { type: string }
+        method: { type: string, nullable: true }
+        supportedMethods: { type: string, nullable: true }
+      xml:
+        name: MethodNotAllowedError
+
+    NotAcceptableError:
+      type: object
+      required: [status, errorCode, message]
+      description: Тело ошибки 406
+      properties:
+        status: { type: integer, example: 406 }
+        errorCode: { type: string, example: NOT_ACCEPTABLE }
+        message: { type: string }
+        accept: { type: string, nullable: true }
+        supported: { type: string, nullable: true }
+      xml:
+        name: NotAcceptableError
+
+    UnsupportedMediaTypeError:
+      type: object
+      required: [status, errorCode, message]
+      description: Тело ошибки 415
+      properties:
+        status: { type: integer, example: 415 }
+        errorCode: { type: string, example: UNSUPPORTED_MEDIA_TYPE }
+        message: { type: string }
+        contentType: { type: string, nullable: true }
+        supported: { type: string, nullable: true }
+      xml:
+        name: UnsupportedMediaTypeError
+
+    InternalServerError:
+      type: object
+      required: [status, errorCode, message]
+      description: Тело ошибки 500
+      properties:
+        status: { type: integer, example: 500 }
+        errorCode: { type: string, example: INTERNAL_ERROR }
+        message: { type: string }
+      xml:
+        name: InternalServerError
+
+    BadGatewayError:
+      type: object
+      required: [status, errorCode, message, upstream]
+      description: Тело ошибки 502
+      properties:
+        status: { type: integer, example: 502 }
+        errorCode: { type: string, example: UPSTREAM_ERROR }
+        message: { type: string }
+        upstream: { type: string, example: worker-service }
+        upstreamStatus: { type: integer, nullable: true }
+        upstreamBody: { type: string, nullable: true }
+      xml:
+        name: BadGatewayError
+
+    ServiceUnavailableError:
+      type: object
+      required: [status, errorCode, message, dependency]
+      description: Тело ошибки 503
+      properties:
+        status: { type: integer, example: 503 }
+        errorCode: { type: string, example: DATABASE_UNAVAILABLE }
+        message: { type: string }
+        dependency: { type: string, example: database }
+      xml:
+        name: ServiceUnavailableError
