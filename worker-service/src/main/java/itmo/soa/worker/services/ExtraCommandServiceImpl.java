@@ -27,16 +27,23 @@ public class ExtraCommandServiceImpl implements ExtraCommandService {
         if (person == null || person.getHeight() == null || person.getNationality() == null) {
             throw new IllegalArgumentException("Для удаления по person обязательны height и nationality");
         }
-        List<WorkerEntity> workers = workerRepository.findAll(WorkerSpecifications.personEquivalent(person));
-        if (!workers.isEmpty()) {
-            workerRepository.deleteAll(workers);
+        if (person.getHeight() <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "height должен быть > 0");
         }
+        List<WorkerEntity> workers = workerRepository.findAll(WorkerSpecifications.personEquivalent(person));
+        if (workers.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Работники с указанным person не найдены");
+        }
+        workerRepository.deleteAll(workers);
     }
 
     @Override
     @Transactional
     public void deleteWorkerWithSalary(float salary) {
         log.debug("Пришел запрос на сервис на удаление работника с зарплатой: {}", salary);
+        if (salary <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "salary должен быть > 0");
+        }
         WorkerEntity worker = workerRepository.findFirstBySalary(salary)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,

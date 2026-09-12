@@ -47,6 +47,7 @@ public class WorkerServiceImpl implements WorkerService {
     @Transactional
     public Worker getWorkerById(long id) {
         log.debug("Пришел запрос на сервис на получение работника с id = {}", id);
+        requirePositiveId(id);
         WorkerEntity workerEntity = workerRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Работник с id " + id + " не найден"));
         return workerMapper.toDto(workerEntity);
@@ -56,6 +57,7 @@ public class WorkerServiceImpl implements WorkerService {
     @Transactional
     public Worker updateWorker(long id, Worker worker) {
         log.debug("Пришел запрос на сервис на обновление работника с id = {}", id);
+        requirePositiveId(id);
         WorkerEntity workerEntity = workerRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Работник с id " + id + " не найден"));
         workerMapper.updateEntity(workerEntity, worker);
@@ -68,6 +70,7 @@ public class WorkerServiceImpl implements WorkerService {
     @Transactional
     public void deleteWorker(long id) {
         log.debug("Пришел запрос на сервис на удаление работника с id = {}", id);
+        requirePositiveId(id);
         WorkerEntity workerEntity = workerRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Работник с id " + id + " не найден"));
         workerRepository.delete(workerEntity);
@@ -102,12 +105,21 @@ public class WorkerServiceImpl implements WorkerService {
             entity.setOrganization(null);
             return;
         }
+        if (organizationId <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "organizationId должен быть > 0");
+        }
         OrganizationEntity organization = organizationRepository.findById(organizationId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
                         "Организация с id " + organizationId + " не найдена"
                 ));
         entity.setOrganization(organization);
+    }
+
+    private static void requirePositiveId(long id) {
+        if (id <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "id должен быть > 0");
+        }
     }
 
     private static Sort buildSort(String sort, String order) {
