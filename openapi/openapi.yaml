@@ -4,7 +4,7 @@ info:
   description: |
     Два веб-сервиса:
 
-    1. **worker-service** (`:8081`) — управление коллекцией `Worker` (CRUD, фильтры, сортировка, пагинация, спец. операции).
+    1. **worker-service** (`:8081`) — управление коллекцией `Worker` (CRUD, PATCH координат, фильтры, сортировка, пагинация, спец. операции).
     2. **hr-service** (`:8082`) — `/hr/fire` и `/hr/move`, вызывают API worker-service.
 
     Формат данных: **XML**. Параметры операций — в URL (path/query).
@@ -102,8 +102,6 @@ paths:
           $ref: '#/components/responses/MethodNotAllowed'
         '406':
           $ref: '#/components/responses/NotAcceptable'
-        '503':
-          $ref: '#/components/responses/ServiceUnavailable'
 
     post:
       tags: [workers]
@@ -119,6 +117,8 @@ paths:
             schema:
               $ref: '#/components/schemas/WorkerCreate'
       responses:
+        '200':
+          $ref: '#/components/responses/EmptyOk'
         '201':
           description: Элемент создан
           content:
@@ -127,8 +127,6 @@ paths:
                 $ref: '#/components/schemas/Worker'
         '400':
           $ref: '#/components/responses/BadRequest'
-        '404':
-          $ref: '#/components/responses/NotFound'
         '405':
           $ref: '#/components/responses/MethodNotAllowed'
         '409':
@@ -137,8 +135,6 @@ paths:
           $ref: '#/components/responses/UnsupportedMediaType'
         '422':
           $ref: '#/components/responses/UnprocessableEntity'
-        '503':
-          $ref: '#/components/responses/ServiceUnavailable'
 
   /workers/{id}:
     parameters:
@@ -149,21 +145,19 @@ paths:
       operationId: getWorkerById
       responses:
         '200':
-          description: Найденный Worker
+          description: |
+            Найденный Worker. Если объект не найден — пустое тело.
           content:
             application/xml:
               schema:
                 $ref: '#/components/schemas/Worker'
         '400':
           $ref: '#/components/responses/BadRequest'
-        '404':
-          $ref: '#/components/responses/NotFound'
         '405':
           $ref: '#/components/responses/MethodNotAllowed'
         '406':
           $ref: '#/components/responses/NotAcceptable'
-        '503':
-          $ref: '#/components/responses/ServiceUnavailable'
+
     put:
       tags: [workers]
       summary: Обновить элемент по ID
@@ -177,15 +171,14 @@ paths:
               $ref: '#/components/schemas/WorkerUpdate'
       responses:
         '200':
-          description: Элемент обновлён
+          description: |
+            Элемент обновлён. Если Worker (или связанная организация) не найден — пустое тело.
           content:
             application/xml:
               schema:
                 $ref: '#/components/schemas/Worker'
         '400':
           $ref: '#/components/responses/BadRequest'
-        '404':
-          $ref: '#/components/responses/NotFound'
         '405':
           $ref: '#/components/responses/MethodNotAllowed'
         '409':
@@ -194,23 +187,51 @@ paths:
           $ref: '#/components/responses/UnsupportedMediaType'
         '422':
           $ref: '#/components/responses/UnprocessableEntity'
-        '503':
-          $ref: '#/components/responses/ServiceUnavailable'
+
     delete:
       tags: [workers]
       summary: Удалить элемент по ID
       operationId: deleteWorker
       responses:
         '200':
-          description: Элемент удалён
+          description: Элемент удалён; если не найден — пустое тело
         '400':
           $ref: '#/components/responses/BadRequest'
-        '404':
-          $ref: '#/components/responses/NotFound'
         '405':
           $ref: '#/components/responses/MethodNotAllowed'
-        '503':
-          $ref: '#/components/responses/ServiceUnavailable'
+
+    patch:
+      tags: [workers]
+      summary: Частично обновить координаты Worker
+      description: |
+        Обновляет только поле `coordinates` у Worker с указанным ID.
+        В теле можно передать одно или оба поля (`x`, `y`) — отсутствующие поля не изменяются.
+        Остальные атрибуты Worker сохраняются без изменений.
+      operationId: patchWorkerCoordinates
+      requestBody:
+        required: true
+        content:
+          application/xml:
+            schema:
+              $ref: '#/components/schemas/CoordinatesPatch'
+      responses:
+        '200':
+          description: |
+            Координаты обновлены, возвращён актуальный Worker.
+            Если Worker не найден — пустое тело.
+          content:
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/Worker'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
 
   /extra/delete-all-workers-with-person:
     delete:
@@ -219,7 +240,7 @@ paths:
       description: |
         Удаляет все элементы коллекции, у которых значение поля `person` эквивалентно
         переданному. Параметры person передаются в query-строке URL.
-        Если подходящих объектов нет — `404`.
+        Если подходящих объектов нет — `200` с пустым телом.
       operationId: deleteWorkersByPerson
       parameters:
         - name: height
@@ -256,15 +277,12 @@ paths:
           schema: { type: string }
       responses:
         '200':
-          description: Удаление выполнено
+          description: Удаление выполнено; если подходящих объектов нет — пустое тело
         '400':
           $ref: '#/components/responses/BadRequest'
-        '404':
-          $ref: '#/components/responses/NotFound'
         '405':
           $ref: '#/components/responses/MethodNotAllowed'
-        '503':
-          $ref: '#/components/responses/ServiceUnavailable'
+
 
   /extra/delete-worker-with-salary:
     delete:
@@ -283,15 +301,12 @@ paths:
           description: Значение salary для поиска и удаления
       responses:
         '200':
-          description: Объект удалён
+          description: Объект удалён; если не найден — пустое тело
         '400':
           $ref: '#/components/responses/BadRequest'
-        '404':
-          $ref: '#/components/responses/NotFound'
         '405':
           $ref: '#/components/responses/MethodNotAllowed'
-        '503':
-          $ref: '#/components/responses/ServiceUnavailable'
+
 
   /extra/average-salary:
     get:
@@ -311,8 +326,7 @@ paths:
           $ref: '#/components/responses/MethodNotAllowed'
         '406':
           $ref: '#/components/responses/NotAcceptable'
-        '503':
-          $ref: '#/components/responses/ServiceUnavailable'
+
 
   /hr/fire/{id}:
     post:
@@ -322,30 +336,27 @@ paths:
         Увольняет сотрудника с заданным `id`: через API worker-service выставляет `status=FIRED`
         и снимает с организации (`organizationId=null`).
         Если сотрудник уже `FIRED` — `409`.
+
+        При успехе возвращает `303 See Other`: канонический ресурс `Worker` живёт на worker-service,
+        поэтому клиент получает актуальные данные через `GET` по URI из заголовка `Location`
+        (паттерн Post/Redirect/Get).
+        Если сотрудник не найден — `200` с пустым телом.
       operationId: fireWorker
       parameters:
         - $ref: '#/components/parameters/WorkerIdPath'
       responses:
         '200':
-          description: Сотрудник уволен
-          content:
-            application/xml:
-              schema:
-                $ref: '#/components/schemas/Worker'
+          $ref: '#/components/responses/EmptyOk'
+        '303':
+          $ref: '#/components/responses/SeeOtherWorker'
         '400':
           $ref: '#/components/responses/BadRequest'
-        '404':
-          $ref: '#/components/responses/NotFound'
         '405':
           $ref: '#/components/responses/MethodNotAllowed'
         '409':
           $ref: '#/components/responses/Conflict'
         '422':
           $ref: '#/components/responses/UnprocessableEntity'
-        '502':
-          $ref: '#/components/responses/BadGateway'
-        '503':
-          $ref: '#/components/responses/ServiceUnavailable'
 
   /hr/move/{worker-id}/{id-from}/{id-to}:
     post:
@@ -356,6 +367,10 @@ paths:
         с сохранением должности (`position`) и заработной платы (`salary`).
         Реализуется через вызовы API worker-service (GET + PUT).
         Если сотрудник не состоит в `id-from` — `409`.
+
+        При успехе возвращает `303 See Other` с `Location` на `GET /workers/{id}` worker-service
+        (канонический ресурс после команды HR).
+        Если сотрудник не найден — `200` с пустым телом.
       operationId: moveWorker
       parameters:
         - name: worker-id
@@ -382,25 +397,17 @@ paths:
           description: ID организации-назначения
       responses:
         '200':
-          description: Сотрудник перемещён
-          content:
-            application/xml:
-              schema:
-                $ref: '#/components/schemas/Worker'
+          $ref: '#/components/responses/EmptyOk'
+        '303':
+          $ref: '#/components/responses/SeeOtherWorker'
         '400':
           $ref: '#/components/responses/BadRequest'
-        '404':
-          $ref: '#/components/responses/NotFound'
         '405':
           $ref: '#/components/responses/MethodNotAllowed'
         '409':
           $ref: '#/components/responses/Conflict'
         '422':
           $ref: '#/components/responses/UnprocessableEntity'
-        '502':
-          $ref: '#/components/responses/BadGateway'
-        '503':
-          $ref: '#/components/responses/ServiceUnavailable'
 
 components:
   parameters:
@@ -462,20 +469,10 @@ components:
               <parameter>id</parameter>
               <reason>Параметр 'id' имеет некорректный тип</reason>
             </BadRequestError>
-    NotFound:
-      description: Объект не найден
-      content:
-        application/xml:
-          schema:
-            $ref: '#/components/schemas/NotFoundError'
-          example: |
-            <NotFoundError>
-              <status>404</status>
-              <errorCode>RESOURCE_NOT_FOUND</errorCode>
-              <message>Работник с id 42 не найден</message>
-              <resource>Worker</resource>
-              <resourceId>42</resourceId>
-            </NotFoundError>
+    EmptyOk:
+      description: |
+        Ресурс не найден или операция не затронула данные — HTTP 200 с пустым телом
+        (вместо 404).
     Conflict:
       description: Конфликт состояния или нарушение целостности данных
       content:
@@ -500,8 +497,8 @@ components:
               <status>405</status>
               <errorCode>METHOD_NOT_ALLOWED</errorCode>
               <message>Метод не поддерживается</message>
-              <method>PATCH</method>
-              <supportedMethods>GET, POST, PUT, DELETE</supportedMethods>
+              <method>POST</method>
+              <supportedMethods>GET, PUT, PATCH, DELETE</supportedMethods>
             </MethodNotAllowedError>
     NotAcceptable:
       description: Клиент запросил неподдерживаемый Accept (ожидается application/xml)
@@ -580,6 +577,18 @@ components:
               <upstreamStatus>500</upstreamStatus>
               <upstreamBody>...</upstreamBody>
             </BadGatewayError>
+    SeeOtherWorker:
+      description: |
+        Команда HR выполнена. Тело ответа пустое: актуальное состояние `Worker`
+        нужно получить через `GET` по URI из заголовка `Location` на worker-service.
+      headers:
+        Location:
+          description: URI канонического Worker на worker-service
+          required: true
+          schema:
+            type: string
+            format: uri
+            example: http://localhost:8081/workers/1
     ServiceUnavailable:
       description: Временно недоступны БД или worker-service
       content:
@@ -629,6 +638,25 @@ components:
         y:
           type: number
           format: float
+
+    CoordinatesPatch:
+      type: object
+      description: |
+        Тело PATCH для частичного обновления координат Worker.
+        Передаются только изменяемые поля; нужно указать хотя бы одно из `x` или `y`.
+      minProperties: 1
+      properties:
+        x:
+          type: number
+          format: double
+          exclusiveMinimum: -250
+          description: Значение > -250; если не передано — не меняется
+        y:
+          type: number
+          format: float
+          description: Если не передано — не меняется
+      xml:
+        name: coordinates
 
     Location:
       type: object
@@ -838,19 +866,6 @@ components:
         reason: { type: string, nullable: true }
       xml:
         name: BadRequestError
-
-    NotFoundError:
-      type: object
-      required: [status, errorCode, message, resource]
-      description: Тело ошибки 404
-      properties:
-        status: { type: integer, example: 404 }
-        errorCode: { type: string, example: RESOURCE_NOT_FOUND }
-        message: { type: string }
-        resource: { type: string, example: Worker }
-        resourceId: { type: string, nullable: true, example: "42" }
-      xml:
-        name: NotFoundError
 
     ValidationError:
       type: object
